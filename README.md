@@ -15,6 +15,10 @@
 
 * [Install](#install)
 * [Usage](#usage)
+* [Configs](#configs)
+  * [Global config](#global-config)
+  * [Local config](#local-config)
+  * [Changing configurations manually](#changing-configurations-manually)
 * [Contributors](#contributors)
 * [License](#license)
 
@@ -55,11 +59,13 @@ To forcefully update **all** local repositories:
 gitman update --all
 ```
 
+
 ## Configs
 
 Gitman optionally uses two separate config files in parallel:
-- A global config file that is located in an operating system user folder.
-- A local config file that is located in the folder that Gitman was ran in.
+
+* A global config file that is located in an operating system user folder.
+* A local config file that is located in the folder that Gitman was ran in.
 
 When Gitman is run for the first time ever on a computer, it asks questions to configure both the global and local config files.
 When Gitman is run for the first time in a certain folder, it asks questiosns to configure the local config file for that folder.
@@ -75,7 +81,7 @@ When Gitman is run for the first time in a certain folder, it asks questiosns to
 
 ### Changing configurations manually
 
-[Global] Set a Github Personal Access Token (you can create one at https://github.com/settings/tokens):
+[Global] Set a Github Personal Access Token (you can create one at <https://github.com/settings/tokens>):
 
 ```sh
 gitman configure --token <token>
@@ -98,6 +104,7 @@ gitman reset
 ```sh
 gitman reset -global
 ```
+
 
 ## Contributors
 

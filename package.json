@@ -3,10 +3,12 @@
   "description": "Manage, update and clone personal and organizational Github repositories.",
   "version": "1.0.0",
   "author": "Yogev Ahuvia <yogev.ahuvia@gmail.com> (http://www.yogevahuvia.com/)",
-  "preferGlobal": true,
   "ava": {
     "failFast": true,
     "verbose": true
+  },
+  "bin": {
+    "gitman": "./bin/gitman-cli.js"
   },
   "bugs": {
     "url": "https://github.com/kindofone/github-manager/issues",
@@ -60,12 +62,6 @@
     "node": ">=8.3"
   },
   "homepage": "https://github.com/kindofone/github-manager",
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged && npm test",
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-    }
-  },
   "keywords": [
     "clone",
     "git",
@@ -94,9 +90,6 @@
     }
   },
   "main": "./bin/gitman-cli.js",
-  "bin": {
-    "gitman": "./bin/gitman-cli.js"
-  },
   "nyc": {
     "check-coverage": true,
     "lines": 100,
@@ -108,6 +101,7 @@
       "text"
     ]
   },
+  "preferGlobal": true,
   "prettier": {
     "singleQuote": true,
     "bracketSpacing": true,
