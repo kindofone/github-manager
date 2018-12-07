@@ -1,0 +1,140 @@
+{
+  "name": "github-manager",
+  "description": "Manage, update and clone personal and organizational Github repositories.",
+  "version": "1.0.0",
+  "author": "Yogev Ahuvia <yogev.ahuvia@gmail.com> (http://www.yogevahuvia.com/)",
+  "preferGlobal": true,
+  "ava": {
+    "failFast": true,
+    "verbose": true
+  },
+  "bugs": {
+    "url": "https://github.com/kindofone/github-manager/issues",
+    "email": "yogev.ahuvia@gmail.com"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "contributors": [
+    "Yogev Ahuvia <yogev.ahuvia@gmail.com> (http://www.yogevahuvia.com/)"
+  ],
+  "dependencies": {
+    "@octokit/rest": "^16.1.0",
+    "boxen": "^2.0.0",
+    "caporal": "^1.1.0",
+    "chalk": "^2.4.1",
+    "clear": "^0.1.0",
+    "conf": "^2.1.0",
+    "figlet": "^1.2.1",
+    "fuzzysearch": "^1.0.3",
+    "gradient-string": "^1.2.0",
+    "inquirer": "^6.2.0",
+    "inquirer-checkbox-plus-prompt": "^1.0.1",
+    "node-emoji": "^1.8.1",
+    "opn": "^5.4.0",
+    "ora": "^3.0.0",
+    "simple-git": "^1.107.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "latest",
+    "@commitlint/config-conventional": "latest",
+    "ava": "latest",
+    "codecov": "latest",
+    "cross-env": "latest",
+    "eslint": "latest",
+    "eslint-config-prettier": "latest",
+    "eslint-config-xo-lass": "latest",
+    "eslint-plugin-prettier": "latest",
+    "fixpack": "latest",
+    "husky": "latest",
+    "lint-staged": "latest",
+    "nyc": "latest",
+    "prettier": "latest",
+    "remark-cli": "latest",
+    "remark-preset-github": "latest",
+    "xo": "latest"
+  },
+  "engines": {
+    "node": ">=8.3"
+  },
+  "homepage": "https://github.com/kindofone/github-manager",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged && npm test",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "keywords": [
+    "clone",
+    "git",
+    "github",
+    "organization",
+    "pull",
+    "repos",
+    "repositories",
+    "update"
+  ],
+  "license": "MIT",
+  "lint-staged": {
+    "linters": {
+      "*.js": [
+        "xo --fix",
+        "git add"
+      ],
+      "*.md": [
+        "remark . -qfo",
+        "git add"
+      ],
+      "package.json": [
+        "fixpack",
+        "git add"
+      ]
+    }
+  },
+  "main": "./bin/gitman-cli.js",
+  "bin": {
+    "gitman": "./bin/gitman-cli.js"
+  },
+  "nyc": {
+    "check-coverage": true,
+    "lines": 100,
+    "functions": 100,
+    "branches": 100,
+    "reporter": [
+      "lcov",
+      "html",
+      "text"
+    ]
+  },
+  "prettier": {
+    "singleQuote": true,
+    "bracketSpacing": true,
+    "trailingComma": "none"
+  },
+  "remarkConfig": {
+    "plugins": [
+      "preset-github"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kindofone/github-manager"
+  },
+  "scripts": {
+    "ava": "cross-env NODE_ENV=test ava",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
+    "lint": "xo && remark . -qfo",
+    "nyc": "cross-env NODE_ENV=test nyc ava",
+    "test": "npm run lint && npm run ava",
+    "test-coverage": "npm run lint && npm run nyc"
+  },
+  "xo": {
+    "prettier": true,
+    "space": true,
+    "extends": [
+      "xo-lass"
+    ]
+  }
+}
