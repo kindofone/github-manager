@@ -1,7 +1,7 @@
 {
   "name": "github-manager",
   "description": "Manage, update and clone personal and organizational Github repositories.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Yogev Ahuvia <yogev.ahuvia@gmail.com> (http://www.yogevahuvia.com/)",
   "ava": {
     "failFast": true,

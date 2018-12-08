@@ -505,7 +505,7 @@ Run \`gitman update\` to update all of the starred repositories.`);
 
   // Program
   program
-    .version('1.0.0')
+    .version('1.0.1')
     .action(() => {
       main();
     })
