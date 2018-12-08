@@ -61,12 +61,6 @@
     "node": ">=8.3"
   },
   "homepage": "https://github.com/kindofone/github-manager",
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-    }
-  },
   "keywords": [
     "clone",
     "git",
