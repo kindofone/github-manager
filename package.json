@@ -29,7 +29,6 @@
     "chalk": "^2.4.1",
     "clear": "^0.1.0",
     "conf": "^2.1.0",
-    "figlet": "^1.2.1",
     "fuzzysearch": "^1.0.3",
     "gradient-string": "^1.2.0",
     "inquirer": "^6.2.0",
@@ -62,6 +61,12 @@
     "node": ">=8.3"
   },
   "homepage": "https://github.com/kindofone/github-manager",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
   "keywords": [
     "clone",
     "git",

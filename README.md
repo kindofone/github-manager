@@ -47,7 +47,7 @@ When run for the first time, Gitman will ask some configuration questions.
 gitman
 ```
 
-To update (git pull) starred local repositories, simply run (don't worry, it shows a confirmation step):
+To update a list of preset local repositories, run the following (don't worry, it asks for confirmation):
 
 ```sh
 gitman update
@@ -72,34 +72,34 @@ When Gitman is run for the first time in a certain folder, it asks questiosns to
 
 ### Global config
 
-**Github Token** - A user generated Github Personal Access Token.
+* **Github Token** - A user generated Github Personal Access Token.
 
 ### Local config
 
-**Folder Type** - Whether the current folder contains personal or organizational repositories.
-**Starred Repositories** - A list of select repositories that can be updated in batch by running `gitman update` in that folder.
+* **Folder Type** - Whether the current folder contains personal or organizational repositories.
+* **Starred Repositories** - A list of select repositories that can be updated in batch by running `gitman update` in that folder.
 
 ### Changing configurations manually
 
-[Global] Set a Github Personal Access Token (you can create one at <https://github.com/settings/tokens>):
+Set a Github Personal Access Token (you can create one at <https://github.com/settings/tokens>):
 
 ```sh
 gitman configure --token <token>
 ```
 
-[Local] Select repositories to star:
+Select repositories to star:
 
 ```sh
 gitman star
 ```
 
-[Local] Reset Gitman current folder configurations (personal or org, starred repos, etc.)
+Reset Gitman current folder configurations (personal or org, starred repos, etc.)
 
 ```sh
 gitman reset
 ```
 
-[Global] Reset all of Gitman configurations (global and current folder):
+Reset all of Gitman configurations (global and current folder):
 
 ```sh
 gitman reset -global

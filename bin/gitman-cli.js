@@ -3,31 +3,17 @@
 (function() {
   // External modules
   const program = require('caporal');
-
   const fs = require('fs');
-
   const chalk = require('chalk');
-
   const gradient = require('gradient-string');
-
-  const figlet = require('figlet');
-
   const opn = require('opn');
-
   const Conf = require('conf');
-
   const octokit = require('@octokit/rest')();
-
   const simpleGit = require('simple-git/promise');
-
   const fuzzysearch = require('fuzzysearch');
-
   const emoji = require('node-emoji');
-
   const clear = require('clear');
-
   const ora = require('ora');
-
   const inquirer = require('inquirer');
 
   // Config
@@ -98,10 +84,16 @@
     });
   }
 
-  function getOrgs() {
-    return octokit.orgs.listMemberships().then(result => {
-      return result.data;
-    });
+  async function getOrgs() {
+    if (
+      !localConfig.has('github.token') ||
+      localConfig.get('github.token') === 'false'
+    ) {
+      return [];
+    }
+
+    const result = await octokit.orgs.listMemberships();
+    return result.data;
   }
 
   function getRepositoriesInPath(path) {
@@ -157,26 +149,24 @@
         });
     }
 
-    return fetch()
-      .then(({ data }) => {
-        const repos = data.map(remoteRepo => {
-          const repo = new Repo(remoteRepo.name, {
-            remote: true,
-            cloneUrl: remoteRepo.ssh_url
-          });
-          repositories.remote[repo.value] = repo;
-
-          return repo;
-        });
-
-        return repos;
-      })
-      .catch(error => {
-        console.log(`\n\n${error.HttpError ||
-          'Error connecting to Github with access token.'}
+    const { data: remoteRepos } = await fetch().catch(err => {
+      console.log(`\n\n${err.HttpError ||
+        'Error connecting to Github with access token.'}
 You can create a new one at: https://github.com/settings/tokens
 Then run \`gitman configure --token <token>\` to save it.`);
+    });
+
+    const repos = remoteRepos.map(remoteRepo => {
+      const repo = new Repo(remoteRepo.name, {
+        remote: true,
+        cloneUrl: remoteRepo.ssh_url
       });
+      repositories.remote[repo.value] = repo;
+
+      return repo;
+    });
+
+    return repos;
   }
 
   async function getRepositories() {
@@ -196,7 +186,6 @@ Then run \`gitman configure --token <token>\` to save it.`);
 
   function prepareActions(repos) {
     const pulls = [];
-
     const clones = [];
 
     for (const repoName of Object.keys(repos)) {
@@ -207,6 +196,7 @@ Then run \`gitman configure --token <token>\` to save it.`);
           break;
 
         case false:
+        default:
           pulls.push(repo);
           break;
       }
@@ -223,12 +213,14 @@ Then run \`gitman configure --token <token>\` to save it.`);
     console.log(chalk.blue('\nYour wish is my command:\n'));
 
     for (const repo of actions.pulls) {
+      /* eslint-disable no-await-in-loop */
       const spinner = ora(`Updating ${chalk.green(repo.value)}`).start();
       await simpleGit(`${reposFolderPath}/${repo.value}`).pull();
       spinner.succeed();
     }
 
     for (const repo of actions.clones) {
+      /* eslint-disable no-await-in-loop */
       const spinner = ora(`Cloning ${chalk.green(repo.value)}`).start();
       await simpleGit(`${reposFolderPath}`).clone(repo.cloneUrl, repo.value);
       spinner.succeed();
@@ -277,173 +269,165 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
   async function localSetup() {
     const orgs = await getOrgs();
 
-    if (orgs.length) {
-      return inquirer
-        .prompt([
-          {
-            type: 'list',
-            name: 'repositoriesType',
-            message:
-              'What type of repositories do you want to manage in this folder?',
-            choices: ['Personal', 'Organizational']
-          },
-          {
-            when: answers => answers.repositoriesType === 'Organizational',
-            type: 'list',
-            name: 'org',
-            message: 'Select an organization to sync with this folder:',
-            choices: orgs.map(org => org.organization.login)
-          }
-        ])
-        .then(answers => {
-          if (answers.repositoriesType === 'Organizational') {
-            localConfig.set('type', 'org');
-            localConfig.set('github.org', answers.org);
-          } else {
-            localConfig.set('type', 'personal');
-          }
+    if (orgs.length > 0) {
+      const answers = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'repositoriesType',
+          message:
+            'What type of repositories do you want to manage in this folder?',
+          choices: ['Personal', 'Organizational']
+        },
+        {
+          when: answers => answers.repositoriesType === 'Organizational',
+          type: 'list',
+          name: 'org',
+          message: 'Select an organization to sync with this folder:',
+          choices: orgs.map(org => org.organization.login)
+        }
+      ]);
 
-          clear();
-          listRepositories();
-        });
+      if (answers.repositoriesType === 'Organizational') {
+        localConfig.set('type', 'org');
+        localConfig.set('github.org', answers.org);
+      } else {
+        localConfig.set('type', 'personal');
+      }
+
+      clear();
+    } else {
+      localConfig.set('type', 'personal');
     }
-    localConfig.set('type', 'personal');
+
+    listRepositories();
   }
 
-  function setup() {
+  async function setup() {
     console.log(`\n${gradient.rainbow('=== Gitman ===')}`);
     console.log(`\nLet's quickly set things up for you:\n`);
 
-    inquirer
-      .prompt([
-        {
-          type: 'confirm',
-          name: 'setupInCurrentFolder',
-          message: `We're at: ${chalk.cyan(
-            process.cwd()
-          )}\n  Is this where you manage your local git repositories?`
+    let answers = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'setupInCurrentFolder',
+        message: `We're at: ${chalk.cyan(
+          process.cwd()
+        )}\n  Is this where you manage your local git repositories?`
+      }
+    ]);
+
+    if (!answers.setupInCurrentFolder) {
+      console.log(
+        '\nNo worries! Summon me again from another folder that you might prefer.'
+      );
+      terminate();
+      return;
+    }
+
+    const tokenCreationInstructions =
+      'Press Enter to open your browser on https://github.com/settings/tokens';
+
+    answers = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'manageRemoteRepos',
+        message: `Would you also let me clone remote repositories for you?`
+      },
+      {
+        when: answers => answers.manageRemoteRepos,
+        type: 'input',
+        name: 'githubToken',
+        message: 'Great! Insert a Github access token:',
+        default: tokenCreationInstructions,
+        validate: value => {
+          if (value === tokenCreationInstructions) {
+            opn('https://github.com/settings/tokens');
+            return false;
+          }
+          if (typeof value === 'string' && value.length > 0) {
+            return true;
+          }
+          return false;
         }
-      ])
-      .then(answers => {
-        if (!answers.setupInCurrentFolder) {
-          console.log(
-            '\nNo worries! Summon me again from another folder that you might prefer.'
-          );
-          terminate();
-          return;
-        }
+      }
+    ]);
 
-        const tokenCreationInstructions =
-          'Press Enter to open your browser on https://github.com/settings/tokens';
+    configure({
+      token: answers.githubToken || 'false'
+    });
 
-        inquirer
-          .prompt([
-            {
-              type: 'confirm',
-              name: 'manageRemoteRepos',
-              message: `Would you also let me clone remote repositories for you?`
-            },
-            {
-              when: answers => answers.manageRemoteRepos,
-              type: 'input',
-              name: 'githubToken',
-              message: 'Great! Insert a Github access token:',
-              default: tokenCreationInstructions,
-              validate: value => {
-                if (value === tokenCreationInstructions) {
-                  opn('https://github.com/settings/tokens');
-                  return false;
-                }
-                if (typeof value === 'string' && value.length) {
-                  return true;
-                }
-                return false;
-              }
-            }
-          ])
-          .then(answers => {
-            configure({
-              token: answers.githubToken || 'false'
-            });
-
-            if (globalConfig.get('github.token') !== 'false') {
-              localSetup();
-            } else {
-              clear();
-              listRepositories();
-            }
-          });
-      });
+    if (globalConfig.get('github.token') === 'false') {
+      clear();
+      listRepositories();
+    } else {
+      localSetup();
+    }
   }
 
-  function listRepositories() {
+  async function listRepositories() {
     function separator(text, color) {
       return new inquirer.Separator(
         `\n ${chalk[color]('=== ' + text + ' ===')} `
       );
     }
 
-    getRepositories().then(repos => {
-      const localRepoNames = repos[0] || [];
+    const localAndRemoteRepos = await getRepositories();
+    const localRepoNames = localAndRemoteRepos[0] || [];
+    let remoteRepoNames = localAndRemoteRepos[1] || [];
 
-      let remoteRepoNames = repos[1] || [];
+    // Filter out remote repositories that have already been cloned locally
+    remoteRepoNames = remoteRepoNames.filter(
+      remoteRepoName =>
+        localRepoNames.findIndex(
+          localRepoName => localRepoName.value === remoteRepoName.value
+        ) === -1
+    );
 
-      // Filter out remote repositories that have already been cloned locally
-      remoteRepoNames = remoteRepoNames.filter(
-        remoteRepoName =>
-          localRepoNames.findIndex(
-            localRepoName => localRepoName.value === remoteRepoName.value
-          ) === -1
-      );
+    console.log(`\n${gradient.rainbow('=== Gitman ===')}\n`);
 
-      console.log(`\n${gradient.rainbow('=== Gitman ===')}\n`);
+    const answers = await inquirer.prompt([
+      {
+        type: 'checkbox-plus',
+        name: 'selections',
+        message: 'Choose repositories to continue:',
+        pageSize: 50,
+        searchable: true,
+        source: (answers, search) => {
+          let choices = [
+            localRepoNames.length > 0 ? separator('Local', 'cyan') : [],
+            ...localRepoNames
+          ];
 
-      inquirer
-        .prompt([
-          {
-            type: 'checkbox-plus',
-            name: 'selections',
-            message: 'Choose repositories to continue:',
-            pageSize: 50,
-            searchable: true,
-            source: (answers, search) => {
-              let choices = [
-                localRepoNames.length ? separator('Local', 'cyan') : [],
-                ...localRepoNames
-              ];
-
-              if (remoteRepoNames.length) {
-                choices = [
-                  ...choices,
-                  separator('Remote', 'gray'),
-                  ...remoteRepoNames
-                ];
-              }
-
-              return Promise.resolve(
-                choices.filter(choice => {
-                  if (!(choice instanceof inquirer.Separator)) {
-                    return fuzzysearch(search, choice.value);
-                  }
-                  return true;
-                })
-              );
-            }
+          if (remoteRepoNames.length > 0) {
+            choices = [
+              ...choices,
+              separator('Remote', 'gray'),
+              ...remoteRepoNames
+            ];
           }
-        ])
-        .then(answers => {
-          clear();
-          const repos = getRepoObjectsFromSelections(answers.selections);
-          const actions = prepareActions(repos);
-          confirmActions(actions);
-        });
-    });
+
+          return Promise.resolve(
+            choices.filter(choice => {
+              if (!(choice instanceof inquirer.Separator)) {
+                return fuzzysearch(search, choice.value);
+              }
+              return true;
+            })
+          );
+        }
+      }
+    ]);
+
+    clear();
+    const repos = getRepoObjectsFromSelections(answers.selections);
+    const actions = prepareActions(repos);
+    confirmActions(actions);
   }
 
-  function confirmActions(actions) {
+  async function confirmActions(actions) {
     let actionsString = '';
 
-    if (actions.pulls.length) {
+    if (actions.pulls.length > 0) {
       actionsString += chalk.cyan(
         `=== update ${emoji.get('arrows_counterclockwise')} ===\n`
       );
@@ -452,63 +436,58 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
       });
     }
 
-    if (actions.clones.length) {
+    if (actions.clones.length > 0) {
       actionsString += chalk.cyan(`\n=== clone ${emoji.get('new')} ===\n`);
       actions.clones.forEach(repo => {
         actionsString += `${chalk.cyan('➜')} ${chalk.green(repo.value)}\n`;
       });
     }
 
-    inquirer
-      .prompt([
-        {
-          type: 'confirm',
-          name: 'actionsConfirmed',
-          message: `Review and confirm your selections:\n\n${actionsString}\nContinue?`
-        }
-      ])
-      .then(answers => {
-        if (answers.actionsConfirmed) {
-          clear();
-          runActions(actions);
-        } else {
-          terminate();
-        }
-      });
+    const answers = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'actionsConfirmed',
+        message: `Review and confirm your selections:\n\n${actionsString}\nContinue?`
+      }
+    ]);
+
+    if (answers.actionsConfirmed) {
+      clear();
+      runActions(actions);
+    } else {
+      terminate();
+    }
   }
 
-  function starRepositories() {
-    getLocalRepos().then(repos => {
-      inquirer
-        .prompt([
-          {
-            type: 'checkbox-plus',
-            name: 'selections',
-            message: 'Choose repositories to star:',
-            pageSize: 50,
-            searchable: true,
-            source: (answers, search) => {
-              const choices = [...repos];
+  async function starRepositories() {
+    const repos = await getLocalRepos();
+    const answers = await inquirer.prompt([
+      {
+        type: 'checkbox-plus',
+        name: 'selections',
+        message: 'Choose repositories to star:',
+        pageSize: 50,
+        searchable: true,
+        source: (answers, search) => {
+          const choices = [...repos];
 
-              return Promise.resolve(
-                choices.filter(choice => {
-                  return fuzzysearch(search, choice.value);
-                })
-              );
-            }
-          }
-        ])
-        .then(answers => {
-          localConfig.set('starredRepos', answers.selections.join(','));
-          console.log(`${chalk.green('✔')} Starred repositories set.
+          return Promise.resolve(
+            choices.filter(choice => {
+              return fuzzysearch(search, choice.value);
+            })
+          );
+        }
+      }
+    ]);
+
+    localConfig.set('starredRepos', answers.selections.join(','));
+    console.log(`${chalk.green('✔')} Starred repositories set.
 Run \`gitman update\` to update all of the starred repositories.`);
-        });
-    });
   }
 
   function main() {
     // Check if it's the first run ever
-    if (globalConfig.store && Object.keys(globalConfig.store).length == 0) {
+    if (globalConfig.store && Object.keys(globalConfig.store).length === 0) {
       setup();
       return;
     }
@@ -517,10 +496,10 @@ Run \`gitman update\` to update all of the starred repositories.`);
       authenticate();
     }
 
-    if (!localConfig.has('type')) {
-      localSetup();
-    } else {
+    if (localConfig.has('type')) {
       listRepositories();
+    } else {
+      localSetup();
     }
   }
 
@@ -539,7 +518,7 @@ Run \`gitman update\` to update all of the starred repositories.`);
       'star',
       'Select repositories to star for easy update with `gitman update`'
     )
-    .action((args, options) => {
+    .action(() => {
       starRepositories();
     })
     .command('reset', 'Reset current folder gitman-config to defaults')
