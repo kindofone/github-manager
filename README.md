@@ -77,7 +77,7 @@ Gitman optionally uses two separate config files in parallel:
 * A local config file that is located in the folder that Gitman was ran in.
 
 When Gitman is run for the first time ever on a computer, it asks questions to configure both the global and local config files.
-When Gitman is run for the first time in a certain folder, it asks questiosns to configure the local config file for that folder.
+When Gitman is run for the first time in a certain folder, it asks questions to configure the local config file for that folder.
 
 ### Global config
 
@@ -99,7 +99,7 @@ gitman --set-token <token>
 Clear a preset access token:
 
 ```sh
-gitman --clear-token <token>
+gitman --clear-token
 ```
 
 Select repositories to update with `gitman update`:
