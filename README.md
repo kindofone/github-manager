@@ -14,11 +14,12 @@
 ## Table of Contents
 
 * [Install](#install)
+* [Overview](#overview)
 * [Usage](#usage)
 * [Configs](#configs)
   * [Global config](#global-config)
   * [Local config](#local-config)
-  * [Changing configurations manually](#changing-configurations-manually)
+  * [Changing configurations](#changing-configurations)
 * [Contributors](#contributors)
 * [License](#license)
 
@@ -37,6 +38,7 @@ npm install -g github-manager
 yarn global add github-manager
 ```
 
+
 ## Overview
 
 Gitman is a tool for working with multiple git (and specifically Github) repositories. Most people manage multiple repositories in one folder and sometimes split personal repositories and organizational repositories to separate folders.
@@ -46,6 +48,7 @@ When Gitman is run in a folder, it looks for a `.gitman-config.json` file. If th
 Once Gitman knows the scope, it shows the list of locally cloned repositories inside the folder, and also shows a list of remotely available repositories (personal and organizational).
 
 Updating local repositories and cloning remote repositories is  as easy as running `gitman` in the folder (or `gitman update` to directly update local repositories.)
+
 
 ## Usage
 

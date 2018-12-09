@@ -92,8 +92,8 @@ Run \`gitman\` to config it again in a folder.\n`);
 
   async function getOrgs() {
     if (
-      !localConfig.has('github.token') ||
-      localConfig.get('github.token') === 'false'
+      !globalConfig.has('github.token') ||
+      globalConfig.get('github.token') === 'false'
     ) {
       return [];
     }
@@ -414,7 +414,11 @@ Or, run \`gitman update --all\` to update all local repositories.`);
           ];
 
           if (remoteRepoNames.length > 0) {
-            choices = [...choices, separator('Remote'), ...remoteRepoNames];
+            choices = [].concat(
+              ...choices,
+              separator('Remote'),
+              ...remoteRepoNames
+            );
           }
 
           return Promise.resolve(
@@ -517,7 +521,7 @@ Or, run \`gitman update --all\` to update all local repositories.`);
 
   // Program
   program
-    .version('1.0.3')
+    .version('1.0.4')
     .option('--set-token <token>', 'Store a Github Personal Access Token')
     .option(
       '--clear-token',
