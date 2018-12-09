@@ -12,7 +12,6 @@
   const simpleGit = require('simple-git/promise');
   const fuzzysearch = require('fuzzysearch');
   const emoji = require('node-emoji');
-  const clear = require('clear');
   const ora = require('ora');
   const inquirer = require('inquirer');
 
@@ -22,7 +21,6 @@
     require('inquirer-checkbox-plus-prompt')
   );
   const globalConfig = new Conf();
-
   const localConfig = new Conf({
     cwd: process.cwd(),
     configName: '.gitman-config'
@@ -49,9 +47,7 @@
     }
 
     toString() {
-      let output = this.remote
-        ? chalk.gray(this.value)
-        : chalk.green(this.value);
+      let output = this.remote ? this.value : chalk.green(this.value);
 
       if (this.branch) {
         const branchColor = this.branch === 'master' ? 'cyan' : 'red';
@@ -72,9 +68,19 @@
   function resetLocalConfig({ global: globalReset }) {
     if (globalReset) {
       globalConfig.clear();
+      console.log(`${chalk.green('✔')} ${gradient.rainbow(
+        'Gitman'
+      )} global config was cleared.
+Run \`gitman\` and it will help you set things up again.\n`);
     }
 
     localConfig.clear();
+    if (!globalReset) {
+      console.log(`${chalk.green('✔')} ${gradient.rainbow(
+        'Gitman'
+      )} local config was cleared.
+Run \`gitman\` to config it again in a folder.\n`);
+    }
   }
 
   function authenticate() {
@@ -150,10 +156,16 @@
     }
 
     const { data: remoteRepos } = await fetch().catch(err => {
-      console.log(`\n\n${err.HttpError ||
-        'Error connecting to Github with access token.'}
-You can create a new one at: https://github.com/settings/tokens
-Then run \`gitman configure --token <token>\` to save it.`);
+      console.error(
+        chalk.red(`\n\n${err.HttpError ||
+          'Error connecting to Github with your access token.'}
+Create a new one at: https://github.com/settings/tokens
+Then, run \`gitman --set-token <token>\` to save it.
+To clear the current token, run \`gitman --clear-token\`\n`)
+      );
+      return {
+        data: []
+      };
     });
 
     const repos = remoteRepos.map(remoteRepo => {
@@ -210,7 +222,7 @@ Then run \`gitman configure --token <token>\` to save it.`);
 
   async function runActions(actions) {
     const reposFolderPath = process.cwd();
-    console.log(chalk.blue('\nYour wish is my command:\n'));
+    console.log('\nYour wish is my command:\n');
 
     for (const repo of actions.pulls) {
       /* eslint-disable no-await-in-loop */
@@ -230,38 +242,42 @@ Then run \`gitman configure --token <token>\` to save it.`);
   }
 
   function done() {
-    console.log(chalk.blue('Done!\n'));
-  }
-
-  function terminate() {
-    console.log(`\nYours truely,\n- ${gradient.rainbow('Gitman')}\n`);
+    console.log(`\n${gradient.rainbow('Gitman')}, done!\n`);
     process.exit();
   }
 
-  async function updateStarredRepositories({ all }) {
+  function terminate() {
+    console.log(`\n${gradient.rainbow('Gitman')}, out.\n`);
+    process.exit();
+  }
+
+  async function updateSelectedRepositories({ all }) {
     const repos = await getLocalRepos();
 
     if (all) {
       const actions = prepareActions(repos);
       confirmActions(actions);
-    } else if (localConfig.has('starredRepos')) {
-      const starredRepoNames = localConfig.get('starredRepos').split(',');
-      const starredRepos = getRepoObjectsFromSelections(starredRepoNames);
-      const actions = prepareActions(starredRepos);
+    } else if (localConfig.has('selectedRepos')) {
+      const selectedRepoNames = localConfig.get('selectedRepos').split(',');
+      const selectedRepos = getRepoObjectsFromSelections(selectedRepoNames);
+      const actions = prepareActions(selectedRepos);
       confirmActions(actions);
     } else {
-      console.log(`No repositories are starred.
-Run \`gitman star\` to select repositories to star.
+      console.log(`Run \`gitman update --select\` to select repositories to update.
 Then run \`gitman update\` again.
-Or, run \`gitman update --all\` to force updating all local repositories.`);
+Or, run \`gitman update --all\` to update all local repositories.`);
     }
   }
 
-  function configure({ token }) {
-    if (typeof token !== 'undefined') {
-      globalConfig.set('github.token', token.trim());
-      authenticate();
+  function configure({ token } = {}) {
+    globalConfig.set(
+      'github.token',
+      typeof token === 'string' ? token.trim() : 'false'
+    );
+
+    if (typeof token !== 'undefined' && token !== 'false') {
       console.log(`${chalk.green('✔')} Github token set`);
+      authenticate();
     }
   }
 
@@ -293,8 +309,6 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
       } else {
         localConfig.set('type', 'personal');
       }
-
-      clear();
     } else {
       localConfig.set('type', 'personal');
     }
@@ -303,8 +317,7 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
   }
 
   async function setup() {
-    console.log(`\n${gradient.rainbow('=== Gitman ===')}`);
-    console.log(`\nLet's quickly set things up for you:\n`);
+    console.log(`Let's quickly set things up for you:\n`);
 
     let answers = await inquirer.prompt([
       {
@@ -312,7 +325,7 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
         name: 'setupInCurrentFolder',
         message: `We're at: ${chalk.cyan(
           process.cwd()
-        )}\n  Is this where you manage your local git repositories?`
+        )}\n  I'll run a quick scan for git repositories here. OK?`
       }
     ]);
 
@@ -353,11 +366,10 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
     ]);
 
     configure({
-      token: answers.githubToken || 'false'
+      token: answers.githubToken
     });
 
     if (globalConfig.get('github.token') === 'false') {
-      clear();
       listRepositories();
     } else {
       localSetup();
@@ -366,8 +378,13 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
 
   async function listRepositories() {
     function separator(text, color) {
+      const separatorText = `=== ${text} ===`;
       return new inquirer.Separator(
-        `\n ${chalk[color]('=== ' + text + ' ===')} `
+        `\n ${
+          typeof color === 'undefined'
+            ? separatorText
+            : chalk[color](separatorText)
+        } `
       );
     }
 
@@ -383,8 +400,6 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
         ) === -1
     );
 
-    console.log(`\n${gradient.rainbow('=== Gitman ===')}\n`);
-
     const answers = await inquirer.prompt([
       {
         type: 'checkbox-plus',
@@ -399,11 +414,7 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
           ];
 
           if (remoteRepoNames.length > 0) {
-            choices = [
-              ...choices,
-              separator('Remote', 'gray'),
-              ...remoteRepoNames
-            ];
+            choices = [...choices, separator('Remote'), ...remoteRepoNames];
           }
 
           return Promise.resolve(
@@ -418,7 +429,6 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
       }
     ]);
 
-    clear();
     const repos = getRepoObjectsFromSelections(answers.selections);
     const actions = prepareActions(repos);
     confirmActions(actions);
@@ -429,17 +439,17 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
 
     if (actions.pulls.length > 0) {
       actionsString += chalk.cyan(
-        `=== update ${emoji.get('arrows_counterclockwise')} ===\n`
+        `${emoji.get('arrows_counterclockwise')} Updating:\n`
       );
       actions.pulls.forEach(repo => {
-        actionsString += `${chalk.cyan('➜')} ${chalk.green(repo.value)}\n`;
+        actionsString += `${chalk.cyan('➜')}  ${chalk.green(repo.value)}\n`;
       });
     }
 
     if (actions.clones.length > 0) {
-      actionsString += chalk.cyan(`\n=== clone ${emoji.get('new')} ===\n`);
+      actionsString += chalk.cyan(`\n${emoji.get('new')} Cloning:\n`);
       actions.clones.forEach(repo => {
-        actionsString += `${chalk.cyan('➜')} ${chalk.green(repo.value)}\n`;
+        actionsString += `${chalk.cyan('➜')}  ${chalk.green(repo.value)}\n`;
       });
     }
 
@@ -452,20 +462,19 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
     ]);
 
     if (answers.actionsConfirmed) {
-      clear();
       runActions(actions);
     } else {
       terminate();
     }
   }
 
-  async function starRepositories() {
+  async function selectRepositoriesToUpdate() {
     const repos = await getLocalRepos();
     const answers = await inquirer.prompt([
       {
         type: 'checkbox-plus',
         name: 'selections',
-        message: 'Choose repositories to star:',
+        message: 'Select repositories to update:',
         pageSize: 50,
         searchable: true,
         source: (answers, search) => {
@@ -480,12 +489,15 @@ Or, run \`gitman update --all\` to force updating all local repositories.`);
       }
     ]);
 
-    localConfig.set('starredRepos', answers.selections.join(','));
-    console.log(`${chalk.green('✔')} Starred repositories set.
-Run \`gitman update\` to update all of the starred repositories.`);
+    localConfig.set('selectedRepos', answers.selections.join(','));
+    console.log(`${chalk.green('✔')} Selected repositories saved.
+From now on, run \`gitman update\` to update your selected repositories.
+Or, run \`gitman update --all\` to update all local repositories.`);
   }
 
   function main() {
+    console.log(`Welcome to ${gradient.rainbow('Gitman')}!\n`);
+
     // Check if it's the first run ever
     if (globalConfig.store && Object.keys(globalConfig.store).length === 0) {
       setup();
@@ -506,33 +518,36 @@ Run \`gitman update\` to update all of the starred repositories.`);
   // Program
   program
     .version('1.0.1')
-    .action(() => {
-      main();
-    })
-    .command('configure', 'Set Gitman configuration properties')
-    .option('--token <token>', 'Store a Github Personal Access Token')
-    .action((args, options) => {
-      configure(options);
-    })
-    .command(
-      'star',
-      'Select repositories to star for easy update with `gitman update`'
+    .option('--set-token <token>', 'Store a Github Personal Access Token')
+    .option(
+      '--clear-token',
+      'Remove the previously set Github Personal Access Token'
     )
-    .action(() => {
-      starRepositories();
+    .action((args, options) => {
+      if (options.setToken || options.clearToken) {
+        configure({ token: options.clearToken ? 'false' : options.setToken });
+      } else {
+        main();
+      }
     })
     .command('reset', 'Reset current folder gitman-config to defaults')
     .option(
       '-g, --global',
       'Reset both local and global gitman-config to defaults'
     )
-    .action((args, options) => {
-      resetLocalConfig(options);
-    })
+    .action((args, options) => resetLocalConfig(options))
     .command('update', 'Batch update local repositories')
+    .option(
+      '--select',
+      'Select repositories to batch update with `gitman update`'
+    )
     .option('--all', 'Forcefully update all local repositories in the folder')
     .action((args, options) => {
-      updateStarredRepositories(options);
+      if (options.select) {
+        selectRepositoriesToUpdate();
+      } else {
+        updateSelectedRepositories(options);
+      }
     });
 
   program.parse(process.argv);

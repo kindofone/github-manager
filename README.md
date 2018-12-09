@@ -37,6 +37,15 @@ npm install -g github-manager
 yarn global add github-manager
 ```
 
+## Overview
+
+Gitman is a tool for working with multiple git (and specifically Github) repositories. Most people manage multiple repositories in one folder and sometimes split personal repositories and organizational repositories to separate folders.
+
+When Gitman is run in a folder, it looks for a `.gitman-config.json` file. If the file does not exist, it asks the user to define the scope of the current folder; managing personal or organizational repositories.
+
+Once Gitman knows the scope, it shows the list of locally cloned repositories inside the folder, and also shows a list of remotely available repositories (personal and organizational).
+
+Updating local repositories and cloning remote repositories is  as easy as running `gitman` in the folder (or `gitman update` to directly update local repositories.)
 
 ## Usage
 
@@ -79,21 +88,27 @@ When Gitman is run for the first time in a certain folder, it asks questiosns to
 * **Folder Type** - Whether the current folder contains personal or organizational repositories.
 * **Starred Repositories** - A list of select repositories that can be updated in batch by running `gitman update` in that folder.
 
-### Changing configurations manually
+### Changing configurations
 
 Set a Github Personal Access Token (you can create one at <https://github.com/settings/tokens>):
 
 ```sh
-gitman configure --token <token>
+gitman --set-token <token>
 ```
 
-Select repositories to star:
+Clear a preset access token:
 
 ```sh
-gitman star
+gitman --clear-token <token>
 ```
 
-Reset Gitman current folder configurations (personal or org, starred repos, etc.)
+Select repositories to update with `gitman update`:
+
+```sh
+gitman update --select
+```
+
+Reset Gitman current folder configurations (personal or org, update selections, etc.)
 
 ```sh
 gitman reset
