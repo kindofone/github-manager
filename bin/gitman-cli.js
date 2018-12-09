@@ -517,7 +517,7 @@ Or, run \`gitman update --all\` to update all local repositories.`);
 
   // Program
   program
-    .version('1.0.1')
+    .version('1.0.2')
     .option('--set-token <token>', 'Store a Github Personal Access Token')
     .option(
       '--clear-token',
