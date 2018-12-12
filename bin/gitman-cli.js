@@ -251,21 +251,27 @@ To clear the current token, run \`gitman --clear-token\`\n`)
     process.exit();
   }
 
-  async function updateSelectedRepositories({ all }) {
+  async function updateSelectedRepositories({ all, confirm }) {
     const repos = await getLocalRepos();
+    let actions = [];
 
-    if (all) {
-      const actions = prepareActions(repos);
-      confirmActions(actions);
+    if (all === true) {
+      actions = prepareActions(repos);
     } else if (localConfig.has('selectedRepos')) {
       const selectedRepoNames = localConfig.get('selectedRepos').split(',');
       const selectedRepos = getRepoObjectsFromSelections(selectedRepoNames);
-      const actions = prepareActions(selectedRepos);
-      confirmActions(actions);
+      actions = prepareActions(selectedRepos);
     } else {
       console.log(`Run \`gitman update --select\` to select repositories to update.
 Then run \`gitman update\` again.
 Or, run \`gitman update --all\` to update all local repositories.`);
+      return;
+    }
+
+    if (confirm) {
+      confirmActions(actions);
+    } else {
+      runActions(actions);
     }
   }
 
@@ -521,7 +527,7 @@ Or, run \`gitman update --all\` to update all local repositories.`);
 
   // Program
   program
-    .version('1.0.4')
+    .version('1.0.5')
     .option('--set-token <token>', 'Store a Github Personal Access Token')
     .option(
       '--clear-token',
@@ -545,7 +551,8 @@ Or, run \`gitman update --all\` to update all local repositories.`);
       '--select',
       'Select repositories to batch update with `gitman update`'
     )
-    .option('--all', 'Forcefully update all local repositories in the folder')
+    .option('--all', 'Update all local repositories in the folder')
+    .option('--confirm', 'Update with a prior confirmation question')
     .action((args, options) => {
       if (options.select) {
         selectRepositoriesToUpdate();

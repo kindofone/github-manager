@@ -41,13 +41,13 @@ yarn global add github-manager
 
 ## Overview
 
-Gitman is a tool for working with multiple git (and specifically Github) repositories. Most people manage multiple repositories in one folder and sometimes split personal repositories and organizational repositories to separate folders.
+Gitman is a tool for working with multiple local git and remote Github repositories. Many developers manage multiple repositories in one folder and sometimes split personal repositories and organizational repositories to separate folders.
 
-When Gitman is run in a folder, it looks for a `.gitman-config.json` file. If the file does not exist, it asks the user to define the scope of the current folder; managing personal or organizational repositories.
+When Gitman is run in a folder, it looks for a `.gitman-config.json` file. If the file does not exist, it asks the user to define the scope of the current folder: managing personal or organizational repositories.
 
 Once Gitman knows the scope, it shows the list of locally cloned repositories inside the folder, and also shows a list of remotely available repositories (personal and organizational).
 
-Updating local repositories and cloning remote repositories is  as easy as running `gitman` in the folder (or `gitman update` to directly update local repositories.)
+Updating local repositories and cloning remote repositories is  as easy as running `gitman` in the folder to see the UI, or `gitman update` to directly update existing local repositories.
 
 
 ## Usage
@@ -59,28 +59,42 @@ When run for the first time, Gitman will ask some configuration questions.
 gitman
 ```
 
-To update a list of preset local repositories, run the following (don't worry, it asks for confirmation):
+To update a list of preselected local repositories, run the following. If it's the first `update` ever in a folder, Gitman will ask you to select a list of repositories:
 
 ```sh
 gitman update
 ```
 
-To forcefully update **all** local repositories:
+To forcefully update **all** local repositories in the folder:
 
 ```sh
 gitman update --all
 ```
 
+To confirm the list of repositories prior to the update process, add `--confirm`:
+
+```sh
+gitman update --confirm
+```
+
+Or:
+
+```sh
+gitman update --all --confirm
+```
+
 
 ## Configs
 
-Gitman optionally uses two separate config files in parallel:
+Gitman uses two separate config files in parallel:
 
 * A global config file that is located in an operating system user folder.
 * A local config file that is located in the folder that Gitman was ran in.
 
 When Gitman is run for the first time ever on a computer, it asks questions to configure both the global and local config files.
 When Gitman is run for the first time in a certain folder, it asks questions to configure the local config file for that folder.
+
+Here are some details what is being saved in the config files.
 
 ### Global config
 
